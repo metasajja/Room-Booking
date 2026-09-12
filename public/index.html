@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ระบบจองห้องประชุม</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2A41; --paper:#FAFAF7; --slate:#5B6B7F; --line:#E3E7EC;
+    --amber:#B45309; --amber-soft:#FDF0DC; --green:#15803D; --green-soft:#DCFCE7;
+    --red:#B91C1C; --red-soft:#FEF2F2; --white:#fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Sarabun","Noto Sans Thai","Segoe UI",sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.55}
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit;color:var(--ink)}
+  :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:24px 32px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header h1{font-size:26px;font-weight:600;letter-spacing:-.01em}
+  header p{color:var(--slate);font-size:14px;margin-top:2px}
+  .hright{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--white)}
+  .seg button{background:transparent;border:0;padding:8px 14px;color:var(--slate)}
+  .seg button.on{background:var(--ink);color:#fff}
+  .adminbtn{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink);display:inline-flex;align-items:center;gap:6px}
+  .adminbtn.on{border-color:var(--ink);background:var(--ink);color:#fff}
+  .badge{display:inline-block;min-width:20px;padding:0 6px;border-radius:10px;background:var(--amber);color:#fff;font-size:12px;text-align:center;line-height:20px}
+  .offline{background:var(--red-soft);color:var(--red);padding:8px 32px;font-size:13.5px;display:none}
+  .offline.show{display:block}
+
+  main{padding:18px 32px 48px;max-width:1400px;margin:0 auto}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .datebar button{background:var(--white);border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--ink)}
+  .datebar button:hover{border-color:var(--slate)}
+  .datebar input[type=date]{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--white)}
+  .datelabel{font-size:18px;font-weight:600;min-width:200px;text-align:center}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--slate);font-size:13px;margin-bottom:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .legend i.dash{background:transparent;border:2px dashed var(--slate)}
+  .primary{background:var(--ink);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:500}
+  .primary:hover{background:#243652}
+  .primary:disabled{opacity:.5;cursor:default}
+  .ghost{background:transparent;border:1px solid var(--line);border-radius:8px;padding:9px 14px;color:var(--ink)}
+  .ghost:hover{border-color:var(--slate)}
+  .danger{background:transparent;border:1px solid #F1C4C4;color:var(--red);border-radius:8px;padding:9px 14px}
+  .danger:hover{background:var(--red-soft)}
+  .ok{background:var(--green);color:#fff;border:0;border-radius:8px;padding:9px 14px}
+  .ok:hover{background:#166534}
+
+  .gridwrap{background:var(--white);border:1px solid var(--line);border-radius:12px;overflow:auto}
+  .grid{display:grid;grid-template-columns:64px repeat(var(--nrooms),minmax(160px,1fr));min-width:900px}
+  .grid .corner{border-bottom:1px solid var(--line);border-right:1px solid var(--line);position:sticky;top:0;z-index:3;background:var(--white)}
+  .roomhead{padding:12px 14px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);position:sticky;top:0;background:var(--white);z-index:3;font-weight:600}
+  .roomhead small{display:block;font-weight:400;color:var(--slate);font-size:12.5px}
+  .roomhead:last-child{border-right:0}
+  .roomhead::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);margin-right:8px;vertical-align:1px}
+  .timecol{border-right:1px solid var(--line)}
+  .timecol div{height:var(--slot);font-size:12px;color:var(--slate);padding:4px 8px 0 0;text-align:right}
+  .col{position:relative;border-right:1px solid var(--line);background:
+      repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--slot) - 1px),var(--line) calc(var(--slot) - 1px),var(--line) var(--slot));
+    height:calc(var(--slot) * var(--rows))}
+  .col:last-child{border-right:0}
+  .slot{position:absolute;left:0;right:0;height:calc(var(--slot)/2);background:transparent;border:0}
+  .slot:hover{background:rgba(27,42,65,.06)}
+  .slot:disabled:hover{background:transparent}
+  .booking{position:absolute;left:5px;right:5px;border-radius:8px;padding:6px 10px;background:color-mix(in srgb,var(--c) 12%,#fff);border:0;border-left:4px solid var(--c);color:var(--ink);text-align:left;overflow:hidden;z-index:2}
+  .booking.pending{background:repeating-linear-gradient(135deg,#fff 0 6px,color-mix(in srgb,var(--c) 10%,#fff) 6px 12px);border:1.5px dashed var(--c);border-left:4px solid var(--c)}
+  .booking b{display:block;font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .booking span{display:block;font-size:12px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nowline{position:absolute;left:0;right:0;height:2px;background:var(--red);z-index:2;pointer-events:none}
+
+  .month{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .month .dow{background:var(--paper);padding:8px;font-size:13px;color:var(--slate);text-align:center}
+  .day{background:var(--white);min-height:104px;padding:8px;text-align:left;border:0;display:flex;flex-direction:column;gap:4px;align-items:stretch}
+  .day:hover{background:#F3F5F8}
+  .day.other{background:#FCFCFB;color:#B5BCC6}
+  .day .n{font-weight:600;font-size:14px}
+  .day.today .n{display:inline-block;background:var(--ink);color:#fff;border-radius:50%;width:24px;height:24px;line-height:24px;text-align:center}
+  .day .ev{font-size:11.5px;padding:1px 6px;border-radius:4px;background:color-mix(in srgb,var(--c) 14%,#fff);border-left:3px solid var(--c);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+  .day .ev.pending{border-left-style:dashed;opacity:.8}
+  .day .more{font-size:11.5px;color:var(--slate)}
+
+  .st{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:10px;font-weight:500}
+  .st.pending{background:var(--amber-soft);color:var(--amber)}
+  .st.approved{background:var(--green-soft);color:var(--green)}
+  .st.rejected{background:var(--red-soft);color:var(--red)}
+
+  section{margin-top:32px}
+  section h2{font-size:18px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .list{display:grid;gap:8px}
+  .item{display:grid;grid-template-columns:110px 1fr auto;gap:14px;align-items:center;background:var(--white);border:1px solid var(--line);border-radius:10px;padding:12px 16px;border-left:4px solid var(--c)}
+  .item .when{font-weight:600}
+  .item .when small{display:block;font-weight:400;color:var(--slate);font-size:12.5px}
+  .item .what b{font-weight:600}
+  .item .what span{color:var(--slate);font-size:13.5px;display:block}
+  .item .btns{display:flex;gap:6px}
+  .item .btns button{background:transparent;border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:13px}
+  .item .btns .ok{border:0}
+  .empty{color:var(--slate);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:10px;background:var(--white)}
+  .adminpanel{display:none}
+  body.admin .adminpanel{display:block}
+
+  .overlay{position:fixed;inset:0;background:rgba(27,42,65,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+  .overlay.open{display:flex}
+  .modal{background:var(--white);border-radius:14px;width:100%;max-width:520px;padding:24px 26px 22px;box-shadow:0 20px 60px rgba(27,42,65,.25);max-height:95vh;overflow:auto}
+  .modal h2{font-size:20px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13.5px;color:var(--slate);margin-bottom:4px}
+  .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--paper)}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--ink);background:#fff;outline:0}
+  .hint{font-size:12.5px;color:var(--slate);margin-top:3px}
+  .hint.bad{color:var(--red)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px}
+  .actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .actions .right{display:flex;gap:8px;margin-left:auto}
+  .msg{border-radius:8px;padding:10px 12px;font-size:13.5px;margin-bottom:12px;display:none}
+  .msg.error{display:block;background:var(--red-soft);color:var(--red);border:1px solid #F1C4C4}
+  .msg.info{display:block;background:var(--amber-soft);color:var(--amber)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:9px;opacity:0;transition:.2s;pointer-events:none;z-index:20}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+  .small{font-size:13px;color:var(--slate)}
+
+  @media (max-width:720px){
+    header,main{padding-left:16px;padding-right:16px}
+    .datelabel{min-width:0;font-size:16px}
+    .item{grid-template-columns:1fr;gap:6px}
+    .row,.row3{grid-template-columns:1fr}
+    .day{min-height:64px;padding:4px}
+    .day .ev{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="offline" id="offline"></div>
+<header>
+  <div>
+    <h1 data-i18n="appTitle"></h1>
+    <p id="subtitle"></p>
+  </div>
+  <div class="hright">
+    <div class="seg"><button id="langTh">ไทย</button><button id="langEn">English</button></div>
+    <div class="seg"><button id="vDay" class="on" data-i18n="viewDay"></button><button id="vMonth" data-i18n="viewMonth"></button></div>
+    <button class="adminbtn" id="adminBtn"><span id="adminBtnText"></span><span class="badge" id="pendingBadge" style="display:none">0</span></button>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="datebar">
+      <button id="prev" aria-label="previous">‹</button>
+      <div class="datelabel" id="dateLabel"></div>
+      <button id="next" aria-label="next">›</button>
+      <button id="today" data-i18n="today"></button>
+      <input type="date" id="datePick">
+    </div>
+    <button class="primary" id="newBtn" data-i18n="book"></button>
+  </div>
+  <div class="legend" id="legend"></div>
+
+  <div class="gridwrap" id="dayView"><div class="grid" id="grid"></div></div>
+  <div class="month" id="monthView" style="display:none"></div>
+
+  <section class="adminpanel">
+    <h2><span data-i18n="pendingTitle"></span> <span class="badge" id="pendingCount">0</span></h2>
+    <div class="list" id="pendingList"></div>
+  </section>
+  <section>
+    <h2 data-i18n="upcoming"></h2>
+    <div class="list" id="list"></div>
+  </section>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h2 id="modalTitle"></h2>
+    <div class="msg" id="msg"></div>
+    <div class="field"><label for="fTitle" data-i18n="fTitle"></label><input id="fTitle"></div>
+    <div class="row3">
+      <div class="field"><label for="fRoom" data-i18n="fRoom"></label><select id="fRoom"></select></div>
+      <div class="field"><label for="fDate" data-i18n="fDate"></label><input type="date" id="fDate"></div>
+      <div class="field"><label for="fAttend" data-i18n="fAttend"></label><input type="number" id="fAttend" min="1" placeholder="—"><div class="hint" id="capHint"></div></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="fStart" data-i18n="fStart"></label><select id="fStart"></select></div>
+      <div class="field"><label for="fEnd" data-i18n="fEnd"></label><select id="fEnd"></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="fName" data-i18n="fName"></label><input id="fName"></div>
+      <div class="field"><label for="fDept" data-i18n="fDept"></label><input id="fDept"></div>
+    </div>
+    <div class="field"><label for="fNote" data-i18n="fNote"></label><textarea id="fNote" rows="2"></textarea></div>
+    <div class="field" id="adminNoteWrap" style="display:none"><label for="fAdminNote" data-i18n="fAdminNote"></label><input id="fAdminNote"></div>
+    <div class="actions">
+      <button class="danger" id="deleteBtn" style="display:none" data-i18n="cancelBooking"></button>
+      <div class="right">
+        <button class="ghost" id="cancelBtn" data-i18n="close"></button>
+        <button class="danger" id="rejectBtn" style="display:none" data-i18n="reject"></button>
+        <button class="ok" id="approveBtn" style="display:none" data-i18n="approve"></button>
+        <button class="primary" id="saveBtn"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="pinOverlay">
+  <div class="modal" style="max-width:360px">
+    <h2 data-i18n="adminLogin"></h2>
+    <div class="msg" id="pinMsg"></div>
+    <div class="field"><label for="fPin" data-i18n="adminPin"></label><input type="password" id="fPin" inputmode="numeric" placeholder="••••"></div>
+    <div class="actions"><div class="right"><button class="ghost" id="pinCancel" data-i18n="close"></button><button class="primary" id="pinOk" data-i18n="login"></button></div></div>
+  </div>
+</div>
+
+<div class="overlay" id="adminMenu">
+  <div class="modal" style="max-width:360px">
+    <h2 data-i18n="adminMode"></h2>
+    <div class="field"><label for="fNewPin" data-i18n="changePin"></label><input type="password" id="fNewPin"></div>
+    <div class="actions" style="flex-direction:column;gap:8px">
+      <button class="ghost" id="changePin" data-i18n="savePin"></button>
+      <button class="ghost" id="logout" data-i18n="logout"></button>
+      <button class="ghost" id="adminClose" data-i18n="close"></button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- i18n ----------
+const I18N = {
+  th: {
+    appTitle:'ระบบจองห้องประชุม', subtitle:'เลือกช่องเวลาว่างในตารางเพื่อจอง การจองจะรอผู้ดูแลอนุมัติก่อนมีผล',
+    subtitleAdmin:'โหมดผู้ดูแล: อนุมัติ แก้ไข หรือยกเลิกการจองได้ทุกรายการ',
+    viewDay:'รายวัน', viewMonth:'รายเดือน', today:'วันนี้', book:'จองห้อง', admin:'ผู้ดูแล', adminOn:'ผู้ดูแล (เปิดอยู่)',
+    pendingTitle:'รอการอนุมัติ', upcoming:'การจองที่กำลังจะถึง', people:'คน', capacity:'จุ {n} คน', pendingLegend:'รออนุมัติ',
+    fTitle:'หัวข้อการประชุม', fRoom:'ห้อง', fDate:'วันที่', fAttend:'จำนวนคน', fStart:'เวลาเริ่ม', fEnd:'เวลาสิ้นสุด',
+    fName:'ผู้จอง', fDept:'แผนก', fNote:'หมายเหตุ', fAdminNote:'หมายเหตุจากผู้ดูแล',
+    phTitle:'เช่น ประชุมทีมขายประจำสัปดาห์', phName:'ชื่อ-นามสกุล', phDept:'เช่น บัญชี', phNote:'อุปกรณ์ที่ต้องใช้, อาหารว่าง ฯลฯ', phAdminNote:'เหตุผลกรณีไม่อนุมัติ (ถ้ามี)',
+    modalNew:'จองห้อง', modalDetail:'รายละเอียดการจอง', submit:'ส่งคำขอจอง', saveEdit:'บันทึกการแก้ไข',
+    cancelBooking:'ยกเลิกการจอง', close:'ปิด', reject:'ไม่อนุมัติ', approve:'อนุมัติ', details:'รายละเอียด', view:'ดู',
+    adminLogin:'เข้าสู่โหมดผู้ดูแล', adminPin:'รหัสผู้ดูแล', login:'เข้าสู่ระบบ', adminMode:'โหมดผู้ดูแล',
+    changePin:'เปลี่ยนรหัสผู้ดูแล', savePin:'บันทึกรหัสใหม่', logout:'ออกจากโหมดผู้ดูแล',
+    status:{pending:'รออนุมัติ',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ'},
+    emptyUpcoming:'ยังไม่มีการจอง กดช่องเวลาว่างในตารางเพื่อเริ่มจองห้อง', emptyPending:'ไม่มีรายการรออนุมัติ', more:'+{n} รายการ',
+    lockedApproved:'รายการนี้อนุมัติแล้ว หากต้องการแก้ไขหรือยกเลิก กรุณาติดต่อผู้ดูแล', lockedRejected:'รายการนี้ไม่ได้รับอนุมัติ', pendingInfo:'รายการนี้รอการอนุมัติ',
+    overCap:'เกินความจุ (จุได้ {n} คน)', confirmCancel:'ยกเลิกการจองนี้ใช่ไหม', rejectReason:'เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)',
+    tSubmitted:'ส่งคำขอจองแล้ว รอผู้ดูแลอนุมัติ', tSaved:'บันทึกการแก้ไขแล้ว', tCancelled:'ยกเลิกการจองแล้ว', tApproved:'อนุมัติแล้ว', tRejected:'บันทึกว่าไม่อนุมัติแล้ว',
+    tAdminOn:'เข้าสู่โหมดผู้ดูแลแล้ว', tPinChanged:'เปลี่ยนรหัสแล้ว', tPinShort:'รหัสต้องมีอย่างน้อย 4 ตัว', wrongPin:'รหัสไม่ถูกต้อง',
+    offline:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองใหม่…',
+    err:{ title_required:'กรุณาใส่หัวข้อการประชุม', name_required:'กรุณาใส่ชื่อผู้จอง', invalid_date:'กรุณาเลือกวันที่', end_before_start:'เวลาสิ้นสุดต้องหลังเวลาเริ่ม',
+      outside_hours:'เวลาจองต้องอยู่ในเวลาทำการ', over_capacity:'จำนวนคนเกินความจุห้อง กรุณาเลือกห้องที่ใหญ่กว่าหรือลดจำนวนคน',
+      locked:'รายการนี้ถูกล็อก กรุณาติดต่อผู้ดูแล', admin_required:'ต้องเข้าสู่โหมดผู้ดูแลก่อน', not_found:'ไม่พบรายการนี้ (อาจถูกลบไปแล้ว)', network:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้',
+      conflict:'{room} มีการจองแล้วในช่วง {start}–{end} ({title}) กรุณาเลือกเวลาหรือห้องอื่น', conflictApprove:'ชนกับรายการที่อนุมัติแล้ว' },
+    days:['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'], dow:['อา','จ','อ','พ','พฤ','ศ','ส'],
+    months:['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'],
+    monthsFull:['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],
+    year:y=>y+543,
+  },
+  en: {
+    appTitle:'Meeting Room Booking', subtitle:'Click an empty time slot to book. Bookings take effect once an admin approves them.',
+    subtitleAdmin:'Admin mode: approve, edit or cancel any booking',
+    viewDay:'Day', viewMonth:'Month', today:'Today', book:'Book a room', admin:'Admin', adminOn:'Admin (on)',
+    pendingTitle:'Awaiting approval', upcoming:'Upcoming bookings', people:'people', capacity:'Seats {n}', pendingLegend:'Pending',
+    fTitle:'Meeting title', fRoom:'Room', fDate:'Date', fAttend:'Attendees', fStart:'Start', fEnd:'End',
+    fName:'Booked by', fDept:'Department', fNote:'Notes', fAdminNote:'Admin note',
+    phTitle:'e.g. Weekly sales meeting', phName:'Full name', phDept:'e.g. Accounting', phNote:'Equipment, refreshments, etc.', phAdminNote:'Reason if rejected (optional)',
+    modalNew:'Book a room', modalDetail:'Booking details', submit:'Submit request', saveEdit:'Save changes',
+    cancelBooking:'Cancel booking', close:'Close', reject:'Reject', approve:'Approve', details:'Details', view:'View',
+    adminLogin:'Admin login', adminPin:'Admin PIN', login:'Log in', adminMode:'Admin mode',
+    changePin:'Change admin PIN', savePin:'Save new PIN', logout:'Leave admin mode',
+    status:{pending:'Pending',approved:'Approved',rejected:'Rejected'},
+    emptyUpcoming:'No bookings yet. Click an empty slot in the timetable to start.', emptyPending:'Nothing awaiting approval', more:'+{n} more',
+    lockedApproved:'This booking is approved. Contact an admin to change or cancel it.', lockedRejected:'This booking was rejected', pendingInfo:'This booking is awaiting approval',
+    overCap:'Over capacity (seats {n})', confirmCancel:'Cancel this booking?', rejectReason:'Reason for rejecting (optional)',
+    tSubmitted:'Request sent. Waiting for admin approval.', tSaved:'Changes saved', tCancelled:'Booking cancelled', tApproved:'Approved', tRejected:'Marked as rejected',
+    tAdminOn:'Admin mode enabled', tPinChanged:'PIN changed', tPinShort:'PIN must be at least 4 characters', wrongPin:'Incorrect PIN',
+    offline:'Cannot reach the server. Retrying…',
+    err:{ title_required:'Please enter a meeting title', name_required:'Please enter who is booking', invalid_date:'Please choose a date', end_before_start:'End time must be after start time',
+      outside_hours:'Booking must be within office hours', over_capacity:'Attendees exceed room capacity. Choose a larger room or fewer people.',
+      locked:'This booking is locked. Contact an admin.', admin_required:'Admin login required', not_found:'Booking not found (it may have been deleted)', network:'Cannot reach the server',
+      conflict:'{room} is already booked {start}–{end} ({title}). Choose another time or room.', conflictApprove:'Overlaps an already-approved booking' },
+    days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], dow:['Su','Mo','Tu','We','Th','Fr','Sa'],
+    months:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    monthsFull:['January','February','March','April','May','June','July','August','September','October','November','December'],
+    year:y=>y,
+  }
+};
+let lang = (()=>{try{return localStorage.getItem('lang')||'th'}catch(e){return 'th'}})();
+const t = (k,vars={}) => { let s=I18N[lang][k]; if(typeof s!=='string') return s; return s.replace(/\{(\w+)\}/g,(_,v)=>vars[v]??''); };
+const roomName = r => r[lang];
+
+// ---------- state ----------
+let ROOMS=[], OPEN=8, CLOSE=18; const SLOT=56;
+let bookings=[];           // bookings loaded for the visible range
+let pendingAll=[];         // admin: all pending
+let current=todayISO(), view='day', editingId=null, isAdmin=false;
+let token = (()=>{try{return sessionStorage.getItem('adminToken')||''}catch(e){return ''}})();
+
+const $=s=>document.querySelector(s);
+function todayISO(){return isoOf(new Date())}
+function isoOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function parts(iso){return iso.split('-').map(Number)}
+function fmtDate(iso){const [y,m,d]=parts(iso);const dt=new Date(y,m-1,d);return lang==='th'?`${t('days')[dt.getDay()]} ${d} ${t('months')[m-1]} ${t('year')(y)}`:`${t('days')[dt.getDay()]}, ${t('months')[m-1]} ${d}, ${y}`}
+function fmtShort(iso){const [y,m,d]=parts(iso);return lang==='th'?`${d} ${t('months')[m-1]}`:`${t('months')[m-1]} ${d}`}
+function toMin(s){const [h,m]=s.split(':').map(Number);return h*60+m}
+function toT(min){return `${String(Math.floor(min/60)).padStart(2,'0')}:${String(min%60).padStart(2,'0')}`}
+function room(id){return ROOMS.find(r=>r.id===id)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function nowMin(){const n=new Date();return n.getHours()*60+n.getMinutes()}
+function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2400)}
+
+// ---------- API ----------
+async function api(path,opt={}){
+  const headers={'Content-Type':'application/json'};
+  if(token) headers.Authorization='Bearer '+token;
+  let res;
+  try{ res=await fetch('/api'+path,{...opt,headers,body:opt.body?JSON.stringify(opt.body):undefined}); }
+  catch(e){ $('#offline').classList.add('show'); throw {error:'network'}; }
+  $('#offline').classList.remove('show');
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){ if(data.error==='admin_required'&&isAdmin){setAdmin(false)} throw data; }
+  return data;
+}
+function errText(e){
+  if(e.error==='conflict'&&e.conflict){const c=e.conflict;return t('err').conflict.replace('{room}',roomName(room(c.roomId))).replace('{start}',c.start).replace('{end}',c.end).replace('{title}',c.title)}
+  return t('err')[e.error]||e.error||'Error';
+}
+function visibleRange(){
+  const [y,m,d]=parts(current);
+  if(view==='day') return [current,current];
+  const s=new Date(y,m-1,1);s.setDate(1-s.getDay());
+  const e=new Date(s);e.setDate(s.getDate()+41);
+  return [isoOf(s),isoOf(e)];
+}
+async function refresh(){
+  try{
+    const [from,to]=visibleRange();
+    const today=todayISO();
+    // fetch visible range plus upcoming window (next 60 days) in one go
+    const end=new Date();end.setDate(end.getDate()+60);
+    const lo=from<today?from:today, hi=to>isoOf(end)?to:isoOf(end);
+    const reqs=[api(`/bookings?from=${lo}&to=${hi}`), api('/admin/pending-count')];
+    if(isAdmin) reqs.push(api(`/bookings?from=2000-01-01&to=2100-01-01`));
+    const [list,pc,all]=await Promise.all(reqs);
+    bookings=list; pendingAll=all?all.filter(b=>b.status==='pending'):[]; pendingCount=pc.count;
+  }catch(e){ if(e.error!=='network') toast(errText(e)); }
+  renderAll();
+}
+let pendingCount=0;
+
+// ---------- render ----------
+function applyI18n(){
+  document.documentElement.lang=lang; document.title=t('appTitle');
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
+  $('#langTh').classList.toggle('on',lang==='th');$('#langEn').classList.toggle('on',lang==='en');
+  $('#fTitle').placeholder=t('phTitle');$('#fName').placeholder=t('phName');$('#fDept').placeholder=t('phDept');$('#fNote').placeholder=t('phNote');$('#fAdminNote').placeholder=t('phAdminNote');
+  $('#offline').textContent=t('offline');
+  $('#subtitle').textContent=isAdmin?t('subtitleAdmin'):t('subtitle');
+  $('#adminBtnText').textContent=isAdmin?t('adminOn'):t('admin');
+  $('#legend').innerHTML=ROOMS.map(r=>`<span><i style="background:${r.color}"></i>${roomName(r)} (${r.cap} ${t('people')})</span>`).join('')+`<span><i class="dash"></i>${t('pendingLegend')}</span>`;
+  $('#fRoom').innerHTML=ROOMS.map(r=>`<option value="${r.id}">${roomName(r)} (${t('capacity',{n:r.cap})})</option>`).join('');
+}
+function renderHeader(){
+  const [y,m]=parts(current);
+  $('#dateLabel').textContent=view==='day'?fmtDate(current):`${t('monthsFull')[m-1]} ${t('year')(y)}`;
+  $('#datePick').value=current;
+  $('#pendingBadge').style.display=pendingCount?'':'none';$('#pendingBadge').textContent=pendingCount;$('#pendingCount').textContent=pendingCount;
+}
+function renderGrid(){
+  const g=$('#grid');
+  g.style.setProperty('--slot',SLOT+'px');g.style.setProperty('--rows',CLOSE-OPEN);g.style.setProperty('--nrooms',ROOMS.length);
+  let html=`<div class="corner"></div>`;
+  html+=ROOMS.map(r=>`<div class="roomhead" style="--c:${r.color}">${roomName(r)}<small>${t('capacity',{n:r.cap})}</small></div>`).join('');
+  html+=`<div class="timecol">`+Array.from({length:CLOSE-OPEN},(_,i)=>`<div>${String(OPEN+i).padStart(2,'0')}:00</div>`).join('')+`</div>`;
+  const isToday=current===todayISO(), nm=nowMin();
+  for(const r of ROOMS){
+    html+=`<div class="col">`;
+    for(let m=OPEN*60;m<CLOSE*60;m+=30){
+      const past=(isToday&&m<nm)||current<todayISO();
+      html+=`<button class="slot" style="top:${(m-OPEN*60)/60*SLOT}px" data-room="${r.id}" data-start="${toT(m)}" ${past?'disabled':''}></button>`;
+    }
+    for(const b of bookings.filter(b=>b.roomId===r.id&&b.date===current&&b.status!=='rejected')){
+      const top=(toMin(b.start)-OPEN*60)/60*SLOT, h=(toMin(b.end)-toMin(b.start))/60*SLOT-2;
+      html+=`<button class="booking ${b.status}" style="--c:${r.color};top:${top+1}px;height:${h}px" data-id="${b.id}"><b>${esc(b.title)}</b><span>${b.start}–${b.end} · ${esc(b.name)}${b.status==='pending'?' · '+t('status').pending:''}</span></button>`;
+    }
+    if(isToday&&nm>=OPEN*60&&nm<=CLOSE*60) html+=`<div class="nowline" style="top:${(nm-OPEN*60)/60*SLOT}px"></div>`;
+    html+=`</div>`;
+  }
+  g.innerHTML=html;
+}
+function renderMonth(){
+  const [y,m]=parts(current);
+  const start=new Date(y,m-1,1);start.setDate(1-start.getDay());
+  let html=t('dow').map(d=>`<div class="dow">${d}</div>`).join('');
+  const today=todayISO();
+  for(let i=0;i<42;i++){
+    const d=new Date(start.getFullYear(),start.getMonth(),start.getDate()+i);
+    if(i>=35&&d.getMonth()!==m-1) break;
+    const iso=isoOf(d), other=d.getMonth()!==m-1;
+    const evs=bookings.filter(b=>b.date===iso&&b.status!=='rejected').sort((a,b)=>toMin(a.start)-toMin(b.start));
+    html+=`<button class="day${other?' other':''}${iso===today?' today':''}" data-date="${iso}"><span class="n">${d.getDate()}</span>
+      ${evs.slice(0,3).map(b=>`<span class="ev ${b.status}" style="--c:${room(b.roomId).color}">${b.start} ${esc(b.title)}</span>`).join('')}
+      ${evs.length>3?`<span class="more">${t('more',{n:evs.length-3})}</span>`:''}</button>`;
+  }
+  $('#monthView').innerHTML=html;
+}
+function itemHTML(b,btns){
+  const r=room(b.roomId);
+  return `<div class="item" style="--c:${r.color}">
+    <div class="when">${b.date===todayISO()?t('today'):fmtShort(b.date)}<small>${b.start}–${b.end}</small></div>
+    <div class="what"><b>${esc(b.title)}</b> <span class="st ${b.status}">${t('status')[b.status]}</span><span>${roomName(r)} · ${esc(b.name)}${b.dept?' ('+esc(b.dept)+')':''}${b.attend?' · '+b.attend+' '+t('people'):''}${b.adminNote?' · '+esc(b.adminNote):''}</span></div>
+    <div class="btns">${btns}</div></div>`;
+}
+function renderLists(){
+  const today=todayISO(), nm=nowMin();
+  const up=bookings.filter(b=>b.date>today||(b.date===today&&toMin(b.end)>nm)).sort((a,b)=>a.date.localeCompare(b.date)||toMin(a.start)-toMin(b.start)).slice(0,30);
+  $('#list').innerHTML=up.length?up.map(b=>itemHTML(b,`<button data-open="${b.id}">${t('details')}</button>`)).join(''):`<div class="empty">${t('emptyUpcoming')}</div>`;
+  const pend=pendingAll.sort((a,b)=>a.date.localeCompare(b.date)||toMin(a.start)-toMin(b.start));
+  $('#pendingList').innerHTML=pend.length?pend.map(b=>itemHTML(b,`<button data-open="${b.id}">${t('view')}</button><button class="danger" data-reject="${b.id}">${t('reject')}</button><button class="ok" data-approve="${b.id}">${t('approve')}</button>`)).join(''):`<div class="empty">${t('emptyPending')}</div>`;
+}
+function renderAll(){
+  applyI18n();renderHeader();
+  $('#dayView').style.display=view==='day'?'':'none';$('#monthView').style.display=view==='month'?'':'none';
+  $('#vDay').classList.toggle('on',view==='day');$('#vMonth').classList.toggle('on',view==='month');
+  if(view==='day')renderGrid();else renderMonth();
+  renderLists();
+}
+
+// ---------- modal ----------
+function fillTimes(){
+  const opts=[];for(let m=OPEN*60;m<=CLOSE*60;m+=30)opts.push(m);
+  $('#fStart').innerHTML=opts.slice(0,-1).map(m=>`<option>${toT(m)}</option>`).join('');
+  $('#fEnd').innerHTML=opts.slice(1).map(m=>`<option>${toT(m)}</option>`).join('');
+}
+function capCheck(){
+  const r=room($('#fRoom').value), n=Number($('#fAttend').value||0), h=$('#capHint');
+  if(n>r.cap){h.textContent=t('overCap',{n:r.cap});h.className='hint bad'} else {h.textContent=t('capacity',{n:r.cap});h.className='hint'}
+}
+function findBooking(id){return bookings.find(b=>b.id===id)||pendingAll.find(b=>b.id===id)}
+function openModal(b={}){
+  editingId=b.id||null;
+  const locked=!!editingId&&b.status!=='pending'&&!isAdmin;
+  $('#modalTitle').innerHTML=(editingId?t('modalDetail'):t('modalNew'))+(editingId?` <span class="st ${b.status}">${t('status')[b.status]}</span>`:'');
+  $('#saveBtn').textContent=editingId?t('saveEdit'):t('submit');
+  $('#saveBtn').style.display=locked?'none':'';
+  $('#deleteBtn').style.display=editingId&&(isAdmin||b.status==='pending')?'':'none';
+  $('#approveBtn').style.display=isAdmin&&editingId&&b.status!=='approved'?'':'none';
+  $('#rejectBtn').style.display=isAdmin&&editingId&&b.status!=='rejected'?'':'none';
+  $('#adminNoteWrap').style.display=isAdmin&&editingId?'':'none';
+  const m=$('#msg');m.className='msg';
+  if(locked){m.textContent=b.status==='approved'?t('lockedApproved'):t('lockedRejected')+(b.adminNote?': '+b.adminNote:'');m.className='msg info'}
+  else if(editingId&&isAdmin&&b.status==='pending'){m.textContent=t('pendingInfo');m.className='msg info'}
+  $('#fTitle').value=b.title||'';$('#fRoom').value=b.roomId||ROOMS[0].id;$('#fDate').value=b.date||current;
+  $('#fStart').value=b.start||'09:00';$('#fEnd').value=b.end||toT(Math.min(toMin($('#fStart').value)+60,CLOSE*60));
+  $('#fName').value=b.name||'';$('#fDept').value=b.dept||'';$('#fAttend').value=b.attend||'';$('#fNote').value=b.note||'';$('#fAdminNote').value=b.adminNote||'';
+  ['fTitle','fRoom','fDate','fStart','fEnd','fName','fDept','fAttend','fNote'].forEach(id=>$('#'+id).disabled=locked);
+  capCheck();
+  $('#overlay').classList.add('open');
+  setTimeout(()=>{if(!locked)$('#fTitle').focus()},30);
+}
+function closeModal(){$('#overlay').classList.remove('open')}
+function showErr(msg){const m=$('#msg');m.textContent=msg;m.className='msg error'}
+async function saveBooking(){
+  const body={roomId:$('#fRoom').value,date:$('#fDate').value,start:$('#fStart').value,end:$('#fEnd').value,title:$('#fTitle').value.trim(),
+    name:$('#fName').value.trim(),dept:$('#fDept').value.trim(),attend:$('#fAttend').value?Number($('#fAttend').value):null,note:$('#fNote').value.trim(),adminNote:$('#fAdminNote').value.trim()};
+  $('#saveBtn').disabled=true;
+  try{
+    const saved=editingId?await api('/bookings/'+editingId,{method:'PUT',body}):await api('/bookings',{method:'POST',body});
+    current=saved.date;closeModal();toast(editingId?t('tSaved'):t('tSubmitted'));await refresh();
+  }catch(e){showErr(errText(e))}
+  finally{$('#saveBtn').disabled=false}
+}
+async function setStatus(id,status,adminNote){
+  try{await api(`/bookings/${id}/status`,{method:'POST',body:{status,adminNote}});closeModal();toast(status==='approved'?t('tApproved'):t('tRejected'));await refresh()}
+  catch(e){toast(e.error==='conflict'?t('err').conflictApprove:errText(e))}
+}
+async function deleteBooking(){
+  if(!editingId||!confirm(t('confirmCancel')))return;
+  try{await api('/bookings/'+editingId,{method:'DELETE'});closeModal();toast(t('tCancelled'));await refresh()}catch(e){showErr(errText(e))}
+}
+
+// ---------- admin ----------
+function setAdmin(on){
+  isAdmin=on;document.body.classList.toggle('admin',on);$('#adminBtn').classList.toggle('on',on);
+  if(!on){token='';try{sessionStorage.removeItem('adminToken')}catch(e){}pendingAll=[]}
+}
+$('#adminBtn').onclick=()=>{ if(isAdmin){$('#adminMenu').classList.add('open')} else {$('#pinMsg').className='msg';$('#fPin').value='';$('#pinOverlay').classList.add('open');setTimeout(()=>$('#fPin').focus(),30)} };
+$('#pinCancel').onclick=()=>$('#pinOverlay').classList.remove('open');
+$('#pinOk').onclick=async()=>{
+  try{const r=await api('/admin/login',{method:'POST',body:{pin:$('#fPin').value}});token=r.token;try{sessionStorage.setItem('adminToken',token)}catch(e){}
+    $('#pinOverlay').classList.remove('open');setAdmin(true);toast(t('tAdminOn'));await refresh();}
+  catch(e){$('#pinMsg').textContent=e.error==='wrong_pin'?t('wrongPin'):errText(e);$('#pinMsg').className='msg error'}
+};
+$('#fPin').onkeydown=e=>{if(e.key==='Enter')$('#pinOk').click()};
+$('#adminClose').onclick=()=>$('#adminMenu').classList.remove('open');
+$('#logout').onclick=async()=>{$('#adminMenu').classList.remove('open');try{await api('/admin/logout',{method:'POST'})}catch(e){}setAdmin(false);await refresh()};
+$('#changePin').onclick=async()=>{const p=$('#fNewPin').value.trim();if(p.length<4){toast(t('tPinShort'));return}
+  try{await api('/admin/pin',{method:'POST',body:{pin:p}});$('#fNewPin').value='';$('#adminMenu').classList.remove('open');toast(t('tPinChanged'))}catch(e){toast(errText(e))}};
+
+// ---------- events ----------
+function setLang(l){lang=l;try{localStorage.setItem('lang',l)}catch(e){}renderAll()}
+$('#langTh').onclick=()=>setLang('th');$('#langEn').onclick=()=>setLang('en');
+function shift(n){const [y,m,d]=parts(current);current=view==='day'?isoOf(new Date(y,m-1,d+n)):isoOf(new Date(y,m-1+n,1));refresh()}
+$('#prev').onclick=()=>shift(-1);$('#next').onclick=()=>shift(1);
+$('#today').onclick=()=>{current=todayISO();refresh()};
+$('#datePick').onchange=e=>{if(e.target.value){current=e.target.value;refresh()}};
+$('#vDay').onclick=()=>{view='day';refresh()};$('#vMonth').onclick=()=>{view='month';refresh()};
+$('#newBtn').onclick=()=>openModal({date:current});
+$('#cancelBtn').onclick=closeModal;$('#saveBtn').onclick=saveBooking;$('#deleteBtn').onclick=deleteBooking;
+$('#approveBtn').onclick=()=>setStatus(editingId,'approved',$('#fAdminNote').value.trim());
+$('#rejectBtn').onclick=()=>setStatus(editingId,'rejected',$('#fAdminNote').value.trim());
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'))});
+$('#fStart').onchange=()=>{const s=toMin($('#fStart').value);if(toMin($('#fEnd').value)<=s)$('#fEnd').value=toT(Math.min(s+60,CLOSE*60))};
+$('#fRoom').onchange=capCheck;$('#fAttend').oninput=capCheck;
+$('#grid').addEventListener('click',e=>{
+  const bk=e.target.closest('.booking');if(bk){openModal(findBooking(bk.dataset.id));return}
+  const sl=e.target.closest('.slot');if(sl&&!sl.disabled)openModal({roomId:sl.dataset.room,date:current,start:sl.dataset.start,end:toT(Math.min(toMin(sl.dataset.start)+60,CLOSE*60))});
+});
+$('#monthView').addEventListener('click',e=>{const d=e.target.closest('.day');if(d){current=d.dataset.date;view='day';refresh()}});
+document.addEventListener('click',e=>{
+  const o=e.target.closest('[data-open]'),a=e.target.closest('[data-approve]'),r=e.target.closest('[data-reject]');
+  if(o){const b=findBooking(o.dataset.open);if(b)openModal(b)}
+  else if(a)setStatus(a.dataset.approve,'approved','');
+  else if(r){const note=prompt(t('rejectReason'))??'';setStatus(r.dataset.reject,'rejected',note)}
+});
+
+(async()=>{
+  try{const cfg=await api('/rooms');ROOMS=cfg.rooms;OPEN=cfg.open;CLOSE=cfg.close;}catch(e){}
+  fillTimes();
+  if(token){try{const me=await api('/admin/me');if(me.admin)setAdmin(true);else setAdmin(false)}catch(e){}}
+  await refresh();
+  setInterval(refresh,30000); // keep everyone's view in sync
+})();
+</script>
+</body>
+</html>
